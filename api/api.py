@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
 import joblib
+from pathlib import Path
 
 # Crear aplicación
 app = FastAPI(
@@ -12,10 +13,13 @@ app = FastAPI(
 )
 
 # Cargar modelo
-modelo = joblib.load(
-    "modelo_churn_regresion_logistica.pkl"
+RUTA_MODELO = (
+    Path(__file__).resolve().parents[1]
+    / "model"
+    / "modelo_churn_regresion_logistica.pkl"
 )
 
+modelo = joblib.load(RUTA_MODELO)
 
 # Estructura de los datos de entrada
 class Cliente(BaseModel):
