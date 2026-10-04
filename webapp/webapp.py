@@ -201,6 +201,16 @@ if st.button("Realizar predicción"):
                 "La API no pudo procesar la solicitud."
             )
 
+            st.write(
+                "Código de estado:",
+                respuesta.status_code
+            )
+
+            st.write(
+                "Respuesta de la API:",
+                respuesta.text
+            )
+
     except Exception as error:
 
         st.error(
