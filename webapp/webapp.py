@@ -1,12 +1,22 @@
-
 import streamlit as st
 import requests
+
+# ==========================================================
+# CONFIGURACIÓN GENERAL
+# ==========================================================
+
+API_BASE_URL = "https://cpe-mineria-datos-telco-churn-api.onrender.com"
+API_PREDICCION_URL = f"{API_BASE_URL}/predecir"
 
 st.set_page_config(
     page_title="Predicción de abandono de clientes",
     page_icon="📊",
     layout="centered"
 )
+
+# ==========================================================
+# ENCABEZADO
+# ==========================================================
 
 st.title("📊 Predicción de abandono de clientes")
 
@@ -19,6 +29,10 @@ st.write(
 )
 
 st.subheader("Datos del cliente")
+
+# ==========================================================
+# DATOS DEL CLIENTE
+# ==========================================================
 
 gender = st.selectbox(
     "Género",
@@ -45,7 +59,8 @@ tenure = st.number_input(
     "Meses de permanencia",
     min_value=0,
     max_value=100,
-    value=12
+    value=2,
+    step=1
 )
 
 PhoneService = st.selectbox(
@@ -53,45 +68,71 @@ PhoneService = st.selectbox(
     ["Yes", "No"]
 )
 
-MultipleLines = st.selectbox(
-    "Múltiples líneas",
-    ["No", "Yes", "No phone service"]
-)
+# Si no tiene teléfono, la opción correcta es No phone service
+if PhoneService == "No":
+    MultipleLines = "No phone service"
+    st.info("Múltiples líneas: No phone service")
+else:
+    MultipleLines = st.selectbox(
+        "Múltiples líneas",
+        ["No", "Yes"]
+    )
 
 InternetService = st.selectbox(
     "Servicio de Internet",
-    ["DSL", "Fiber optic", "No"]
+    ["DSL", "Fiber optic", "No"],
+    index=1
 )
 
-OnlineSecurity = st.selectbox(
-    "Seguridad en línea",
-    ["No", "Yes", "No internet service"]
-)
+# Si no tiene Internet, las variables asociadas se ajustan automáticamente
+if InternetService == "No":
 
-OnlineBackup = st.selectbox(
-    "Respaldo en línea",
-    ["No", "Yes", "No internet service"]
-)
+    OnlineSecurity = "No internet service"
+    OnlineBackup = "No internet service"
+    DeviceProtection = "No internet service"
+    TechSupport = "No internet service"
+    StreamingTV = "No internet service"
+    StreamingMovies = "No internet service"
 
-DeviceProtection = st.selectbox(
-    "Protección de dispositivos",
-    ["No", "Yes", "No internet service"]
-)
+    st.info(
+        "El cliente no posee servicio de Internet. "
+        "Los servicios asociados fueron establecidos automáticamente "
+        "como 'No internet service'."
+    )
 
-TechSupport = st.selectbox(
-    "Soporte técnico",
-    ["No", "Yes", "No internet service"]
-)
+else:
 
-StreamingTV = st.selectbox(
-    "Streaming de TV",
-    ["No", "Yes", "No internet service"]
-)
+    OnlineSecurity = st.selectbox(
+        "Seguridad en línea",
+        ["No", "Yes"]
+    )
 
-StreamingMovies = st.selectbox(
-    "Streaming de películas",
-    ["No", "Yes", "No internet service"]
-)
+    OnlineBackup = st.selectbox(
+        "Respaldo en línea",
+        ["No", "Yes"]
+    )
+
+    DeviceProtection = st.selectbox(
+        "Protección de dispositivos",
+        ["No", "Yes"]
+    )
+
+    TechSupport = st.selectbox(
+        "Soporte técnico",
+        ["No", "Yes"]
+    )
+
+    StreamingTV = st.selectbox(
+        "Streaming de TV",
+        ["No", "Yes"],
+        index=1
+    )
+
+    StreamingMovies = st.selectbox(
+        "Streaming de películas",
+        ["No", "Yes"],
+        index=1
+    )
 
 Contract = st.selectbox(
     "Tipo de contrato",
@@ -120,25 +161,29 @@ PaymentMethod = st.selectbox(
 MonthlyCharges = st.number_input(
     "Cargo mensual",
     min_value=0.0,
-    value=70.0,
+    value=85.0,
     step=0.01
 )
 
 TotalCharges = st.number_input(
     "Cargo total",
     min_value=0.0,
-    value=1000.0,
+    value=170.0,
     step=0.01
 )
+
+# ==========================================================
+# BOTÓN DE PREDICCIÓN
+# ==========================================================
 
 if st.button("Realizar predicción"):
 
     datos = {
         "gender": gender,
-        "SeniorCitizen": SeniorCitizen,
+        "SeniorCitizen": int(SeniorCitizen),
         "Partner": Partner,
         "Dependents": Dependents,
-        "tenure": tenure,
+        "tenure": int(tenure),
         "PhoneService": PhoneService,
         "MultipleLines": MultipleLines,
         "InternetService": InternetService,
@@ -151,16 +196,50 @@ if st.button("Realizar predicción"):
         "Contract": Contract,
         "PaperlessBilling": PaperlessBilling,
         "PaymentMethod": PaymentMethod,
-        "MonthlyCharges": MonthlyCharges,
-        "TotalCharges": TotalCharges
+        "MonthlyCharges": float(MonthlyCharges),
+        "TotalCharges": float(TotalCharges)
     }
 
     try:
 
-        respuesta = requests.post(
-            "https://cpe-mineria-datos-telco-churn-api.onrender.com/predecir",
-            json=datos
-        )
+        with st.spinner(
+            "Conectando con la API y realizando la predicción..."
+        ):
+
+            # --------------------------------------------------
+            # 1. Comprobar / despertar la API de Render
+            # --------------------------------------------------
+
+            comprobacion = requests.get(
+                API_BASE_URL,
+                timeout=120
+            )
+
+            if comprobacion.status_code != 200:
+                st.error(
+                    "La API no se encuentra disponible en este momento."
+                )
+
+                st.write(
+                    "Código de estado:",
+                    comprobacion.status_code
+                )
+
+                st.stop()
+
+            # --------------------------------------------------
+            # 2. Enviar los datos a la API
+            # --------------------------------------------------
+
+            respuesta = requests.post(
+                API_PREDICCION_URL,
+                json=datos,
+                timeout=120
+            )
+
+        # ======================================================
+        # RESPUESTA CORRECTA
+        # ======================================================
 
         if respuesta.status_code == 200:
 
@@ -170,7 +249,7 @@ if st.button("Realizar predicción"):
 
             st.metric(
                 "Probabilidad de abandono",
-                f"{resultado['probabilidad_abandono']} %"
+                f"{resultado['probabilidad_abandono']:.2f} %"
             )
 
             if resultado["prediccion"] == 1:
@@ -195,6 +274,10 @@ if st.button("Realizar predicción"):
                 resultado["numero_servicios"]
             )
 
+        # ======================================================
+        # ERROR DEVUELTO POR LA API
+        # ======================================================
+
         else:
 
             st.error(
@@ -202,19 +285,52 @@ if st.button("Realizar predicción"):
             )
 
             st.write(
-                "Código de estado:",
+                "**Código de estado:**",
                 respuesta.status_code
             )
 
             st.write(
-                "Respuesta de la API:",
+                "**Respuesta de la API:**"
+            )
+
+            st.code(
                 respuesta.text
             )
+
+    # ==========================================================
+    # ERRORES DE CONEXIÓN
+    # ==========================================================
+
+    except requests.exceptions.Timeout:
+
+        st.error(
+            "La API tardó demasiado en responder."
+        )
+
+        st.warning(
+            "Los servicios gratuitos de Render pueden entrar en "
+            "modo de suspensión después de un periodo de inactividad. "
+            "Espera unos segundos e intenta nuevamente."
+        )
+
+    except requests.exceptions.ConnectionError as error:
+
+        st.error(
+            "No fue posible establecer conexión con la API."
+        )
+
+        st.write(
+            "Detalle:",
+            str(error)
+        )
 
     except Exception as error:
 
         st.error(
-            "No fue posible conectarse con la API."
+            "Se produjo un error inesperado."
         )
 
-        st.write(error)
+        st.write(
+            "Detalle:",
+            str(error)
+        )
