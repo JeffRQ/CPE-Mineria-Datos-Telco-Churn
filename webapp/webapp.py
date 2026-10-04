@@ -158,7 +158,7 @@ if st.button("Realizar predicción"):
     try:
 
         respuesta = requests.post(
-            "http://127.0.0.1:8000/predecir",
+            "https://cpe-mineria-datos-telco-churn-api.onrender.com/predecir",
             json=datos
         )
 
